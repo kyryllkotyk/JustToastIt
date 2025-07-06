@@ -5,6 +5,7 @@
 #include <iostream>
 
 void printGuide() {
+	//TODO:: Allow for a direct time entry, "TaskName Time
 	std::cout << "Guide:\nNOTE, NOT CASE SENSITIVE\n"
 		<< "Accepted entries are :"
 		<< "\nTask Creation: \ntask (starts the creation process),"
@@ -16,7 +17,7 @@ void printGuide() {
 		<< "\nDisplay by Difficulty(ddiff), Display by Due Date(ddue)"
 		<< "\nDisplay by Priority (dprior), Display (d),"
 		<< "\nDisplay by Completion Time (dct)"
-		<< "\nEntering EXIT at any time will terminate the program";
+		<< "\nEntering EXIT at any time will terminate the program\n";
 }
 
 int whatCommand(std::string input) {
@@ -27,6 +28,7 @@ int whatCommand(std::string input) {
 	//Return -1 if wrong command and log differently
 	//Return the corresponding int to the command and acceptInput
 	//Call other functions to figure out how to execute
+	return -1;
 }
 
 std::string lowercase(std::string input) {
@@ -40,22 +42,23 @@ std::string lowercase(std::string input) {
 //TODO:: error handling. worry about misinput.
 void acceptInput(TaskCollection collection) {
 	std::string input;
-	std::string linput = lowercase(input);
+	std::string linput = "";
 	while (linput != "exit") {
 		std::cin >> input;
+		linput = lowercase(input);
 		if (linput == "guide") {
 			printGuide();
 		}
 		else {
-			parse(input);
+			//parse(input);
 		}
 	}
 	exit(0);
 }
 
-int main() {
-	TaskCollection collection;
-	std::cout <<
-		"Welcome to the toast notifier!\nEnter 'GUIDE' to learn how it works!";
-	acceptInput(collection);
-}
+//int main() {
+//	TaskCollection collection;
+//	std::cout <<
+//		"Welcome to the toast notifier!\nEnter 'GUIDE' to learn how it works!\n";
+//	acceptInput(collection);
+//}

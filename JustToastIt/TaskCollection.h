@@ -14,7 +14,7 @@ public:
 	void displayTasksByDifficulty();
 	void displayTasksByCompletionTime();
 	//add task should set the unique id to the task
-	void addTask(Task& task);
+	void addTask(Task& task); // called from main
 	bool removeTask(const std::string& taskName);
 	bool removeTask(const int id);
 
