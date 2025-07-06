@@ -18,7 +18,9 @@
 //TODO:: ADD A PRECISION METER FOR SYSTEM_CLOCK.NOW()!! It is more precise than the input
 //TODO:: If buggy, ensure that everything was converted to minute precision. mintime and 
 //		 maxtime were in hour precision previously, transition couldve caused issues
-
+//TODO:: Ensure defaulting behavior for misinput 
+//TODO:: ensure time > 23:59 cannot be entered
+//TODO:: confirmed, misinput still goes through. needs to be fixed
 class Task
 {
 public:
