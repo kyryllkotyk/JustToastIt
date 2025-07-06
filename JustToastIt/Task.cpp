@@ -110,7 +110,7 @@ std::string Task::getName() const
 bool Task::setDifficulty(short& newDiff)
 {
 	// Check whether the new difficulty is in bounds
-	if (newDiff <= MINDIFF || newDiff > MAXDIFF) {
+	if (newDiff < MINDIFF || newDiff > MAXDIFF) {
 		LOG("Task", "Difficulty input out of bounds", true);
 		return false;
 	}
