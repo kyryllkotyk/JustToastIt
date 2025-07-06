@@ -138,7 +138,7 @@ bool Task::setEstimatedTime(int& newTime)
 	return true;
 }
 
-void Task::setID(int& newID)
+void Task::setID(int& newID) 
 {
 	// No error handling as all ID changes will be done by TaskCollection
 	// The user has no control over this.
