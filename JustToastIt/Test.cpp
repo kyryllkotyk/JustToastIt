@@ -4,6 +4,50 @@
 #include "Task.h"
 #include "TaskCollection.h"
 
+/****************************************************\
+* Instructions for fetching the updated project:     *
+*	Open Git Bash									 *		
+*	Write "cd path/to/the/proj" (Replace the path)	 *
+*	Write "git checkout main"						 *
+*	Pull the changes "git pull origin main"			 *
+*		Resolve any conflicts if present			 *
+*													 *
+* Create new branch for testing:					 *
+*	Repeat the first two steps						 *
+*	git checkout -b add-testing						 *
+*													 *
+* Stage and commit changes:							 *
+*	git add Test.cpp								 *
+*	git commit -m "Add testing code for X feature"	 *
+*	Replace X with what was tested. Keep it brief	 *
+*													 *
+* Push to GitHub:									 *
+*	git push origin add-testing						 *
+*													 *
+* Open a pull request:								 *
+*	Go to GitHub									 *
+*	Open the repository								 *
+*	main must be the base branch					 *
+*	add-testing will be the compare branch			 *
+*	Add a description of what you tested			 *
+*	Click "Create a Pull Request"					 *
+\****************************************************/
+
+/****************************************************\
+* Instructions for testing the project:				 *
+*													 *
+* TBD												 *
+*													 *
+*													 *
+*													 *
+*													 *
+*													 *
+*													 *
+*													 *
+\****************************************************/
+
+
+
 void testLogging(Logger& logger) {
 	logger.log("A", "Test A", true);
 	logger.log("E", "Test E", false);
@@ -46,7 +90,9 @@ void testTaskCollection() {
 	std::string dueDate = "2025-07-06 23:59";
 	collection.createAndAddTask(name, 5, 71234, dueDate);
 	name = "Taskie2";
-	collection.createAndAddTask(name, 1, 1283, dueDate);
+	//For some reason, this breaks both difficulty and time, misinput improperly handled
+	//TODO:: FIX
+	collection.createAndAddTask(name, 1, 23, dueDate); 
 	name = "Taskie3";
 	collection.createAndAddTask(name, 7, 1823, dueDate);
 	std::cout << "Displaying Tasks in collection:\n";
@@ -70,7 +116,9 @@ int main() {
 	logger.clearLogs();
 
 	testTaskCollection(); 
-	logger.printLogs();
+	//logger.printLogs();
 	//logger.printLogsSortedByClass();
+	logger.clearLogs();
+
 	return 0;
 }
