@@ -1,53 +1,178 @@
-#include "Test.h"
-#include <cassert>
+#define CATCH_CONFIG_MAIN
 #include "Logger.h"
 #include "Task.h"
 #include "TaskCollection.h"
+#include <ctime> // for random generation
+#include <cstdlib> // for random generation
+#include "catch_amalgamated.hpp"
 
-/****************************************************\
-* Instructions for fetching the updated project:     *
-*	Open Git Bash									 *		
-*	Write "cd path/to/the/proj" (Replace the path)	 *
-*	Write "git checkout main"						 *
-*	Pull the changes "git pull origin main"			 *
-*		Resolve any conflicts if present			 *
-*													 *
-* Create new branch for testing:					 *
-*	Repeat the first two steps						 *
-*	git checkout -b add-testing						 *
-*													 *
-* Stage and commit changes:							 *
-*	git add Test.cpp								 *
-*	git commit -m "Add testing code for X feature"	 *
-*	Replace X with what was tested. Keep it brief	 *
-*													 *
-* Push to GitHub:									 *
-*	git push origin add-testing						 *
-*													 *
-* Open a pull request:								 *
-*	Go to GitHub									 *
-*	Open the repository								 *
-*	main must be the base branch					 *
-*	add-testing will be the compare branch			 *
-*	Add a description of what you tested			 *
-*	Click "Create a Pull Request"					 *
-\****************************************************/
+const int MAX_TESTS = 1000;
+// Create Task Simplified
+// Saves time for testing
+Task create(std::string name, short diff, int time, int minutesFromNow) {
+	TIME_POINT point = std::chrono::system_clock::now() + std::chrono::minutes(minutesFromNow);
+	Task task;
+	task.setDifficulty(diff);
+	task.setDueDate(point);
+	task.setEstimatedTime(time);
+	task.setName(name);
+	return task;
+}
 
-/****************************************************\
-* Instructions for testing the project:				 *
-*													 *
-* TBD												 *
-*													 *
-*													 *
-*													 *
-*													 *
-*													 *
-*													 *
-*													 *
-\****************************************************/
+std::string randomStringGenerator(int min, int max) {
+	srand(time(0));
+	std::string ret = "";
+	int randomNumber = rand() % (max - min + 1) + min;
+	for (int i = 0; i < randomNumber; i++) {
+		//ASCII 48 - 122
+		ret += char(rand() % 75 + 48);
+	}
+	return ret;
+}
 
+int rng(int min, int max) {
+	return(rand() % (max - min + 1) + min);
+}
+//TODO:: add tests that use string rather than minutesFromNow
 
+TEST_CASE("Task Time Input", "[Task]") {
+	srand(time(0));
 
+	SECTION("Typical Time Input") {
+		Task task = create("name", 5, 1280, 1000);
+		REQUIRE(task.getEstimatedTime() == 1280);
+
+		for (int i = 0; i < MAX_TESTS; i++) {
+			int typicalInput = rng(60, 599999);
+			task = create("name", 5, typicalInput, 1000);
+			REQUIRE(task.getEstimatedTime() == typicalInput);
+		}
+	}
+
+	SECTION("Simple Negative Time Input") {
+		Task task = create("name", 5, -123, 1000);
+		REQUIRE(task.getEstimatedTime() == -1);
+
+		for (int i = 0; i < MAX_TESTS; i++) {
+			int simpleNegative = rng(-599999, -60);
+			task = create("name", 5, simpleNegative, 1000);
+			REQUIRE(task.getEstimatedTime() == -1);
+		}
+	}
+
+	SECTION("Small Negative Time Input", "[Task]") {
+		Task task = create("name", 5, -20, 1000);
+		REQUIRE(task.getEstimatedTime() == -1);
+
+		for (int i = 0; i < MAX_TESTS; i++) {
+			int smallNegative = rng(-59, -1);
+			task = create("name", 5, smallNegative, 1000);
+			REQUIRE(task.getEstimatedTime() == -1);
+		}
+	}
+
+	SECTION("Small Positive Time Input", "[Task]") {
+		Task task = create("name", 5, 32, 1000);
+		REQUIRE(task.getEstimatedTime() == -1);
+
+		for (int i = 0; i < MAX_TESTS; i++) {
+			int smallPositive = rng(0, 59);
+			task = create("name", 5, smallPositive, 1000);
+			REQUIRE(task.getEstimatedTime() == -1);
+		}
+	}
+
+	SECTION("Large Positive Time Input", "[Task]") {
+		Task task = create("name", 5, 7598895, 1000);
+		REQUIRE(task.getEstimatedTime() == -1);
+
+		for (int i = 0; i < MAX_TESTS; i++) {
+			int largePositive = rng(600001, 2000000000);
+			task = create("name", 5, largePositive, 1000);
+			REQUIRE(task.getEstimatedTime() == -1);
+		}
+	}
+	
+	SECTION("Large Negative Time Input", "[Task]") {
+		Task task = create("name", 5, -7598895, 1000);
+		REQUIRE(task.getEstimatedTime() == -1);
+
+		for (int i = 0; i < MAX_TESTS; i++) {
+			int largeNegative = rng(-2000000000, -600001);
+			task = create("name", 5, largeNegative, 1000);
+			REQUIRE(task.getEstimatedTime() == -1);
+		}
+	}
+}
+
+TEST_CASE("Task Difficulty Input", "[Task]") {
+	SECTION("Typical Difficulty Input") {
+		Task task = create("name", 4, 60, 1000);
+		REQUIRE(task.getDifficulty() == 4);
+
+		for (int i = 0; i < MAX_TESTS / 10; i++) {
+			int typicalDifficulty = rng(1, 10);
+			task = create("name", typicalDifficulty, 60, 1000);
+			REQUIRE(task.getDifficulty() == typicalDifficulty);
+		}
+	}
+
+	SECTION("Small Positive Difficulty Input") {
+		Task task = create("name", 0, 60, 1000);
+		REQUIRE(task.getDifficulty() == -1);
+	}
+
+	SECTION("Large Positive Difficulty Input") {
+		Task task = create("name", 124, 60, 1000);
+		REQUIRE(task.getDifficulty() == -1);
+
+		for (int i = 0; i < MAX_TESTS / 10; i++) {
+			int largePositive = rng(11, 32767);
+			task = create("name", largePositive, 60, 1000);
+			REQUIRE(task.getDifficulty() == -1);
+		}
+	}
+
+	SECTION("Small Negative Difficulty Input") {
+		Task task = create("name", -5, 60, 1000);
+		REQUIRE(task.getDifficulty() == -1);
+
+		for (int i = 0; i < MAX_TESTS / 10; i++) {
+			int smallNegative = rng(-10, -1);
+			task = create("name", smallNegative, 60, 1000);
+			REQUIRE(task.getDifficulty() == -1);
+		}
+	}
+
+	SECTION("Large Negative Difficulty Input") {
+		Task task = create("name", -7189, 60, 1000);
+		REQUIRE(task.getDifficulty() == -1);
+
+		for (int i = 0; i < MAX_TESTS / 10; i++) {
+			int largeNegative = rng(-32767, -11);
+			task = create("name", largeNegative, 60, 1000);
+			REQUIRE(task.getDifficulty() == -1);
+		}
+	}
+}
+
+TEST_CASE("Task Name Input", "[Task]") {
+	//TODO:: create max name size
+}
+
+TEST_CASE("Task Date Input", "[Task]") {
+	//TODO:: create farthest due date
+}
+
+TEST_CASE("Task Collection Task Input", "[TaskCollection]") {
+
+}
+
+TEST_CASE("Task Collection ID Assignment", "[TaskCollection]") {
+
+}
+
+/* !! Legacy Testing !! 
 void testLogging(Logger& logger) {
 	logger.log("A", "Test A", true);
 	logger.log("E", "Test E", false);
@@ -76,12 +201,12 @@ void testTask() {
 
 	std::string time = "2025-07-05 21:03";
 	std::string name = "Name1";
-	Task incorrectTimeTask(name, 5, 8, 1380, time);
-	/*std::cout << incorrectTimeTask.getName() << " "
+	Task incorrectTimeTask(name, 8, 1380, time);
+	std::cout << incorrectTimeTask.getName() << " "
 		<< incorrectTimeTask.getID() << " "
 		<< incorrectTimeTask.getDifficulty() << " " 
 		<< incorrectTimeTask.getEstimatedTime() << " "
-		<< incorrectTimeTask.getDueDateInMinutes() << "\n";*/
+		<< incorrectTimeTask.getDueDateInMinutes() << "\n";
 }
 
 void testTaskCollection() {
@@ -92,33 +217,34 @@ void testTaskCollection() {
 	name = "Taskie2";
 	//For some reason, this breaks both difficulty and time, misinput improperly handled
 	//TODO:: FIX
-	collection.createAndAddTask(name, 1, 23, dueDate); 
-	name = "Taskie3";
-	collection.createAndAddTask(name, 7, 1823, dueDate);
-	std::cout << "Displaying Tasks in collection:\n";
-	collection.displayTasks();
-	std::cout << "Displaying Tasks sorted by difficulty:\n";
-	collection.displayTasksByDifficulty();
-	std::cout << "Displaying Tasks sorted by estimated time:\n";
-	collection.displayTasksByEstimatedTime();
-	std::cout << "\n";
+	//collection.createAndAddTask(name, 1, 23, dueDate); 
+	//name = "Taskie3";
+	//collection.createAndAddTask(name, 7, 1823, dueDate);
+	//std::cout << "Displaying Tasks in collection:\n";
+	//collection.displayTasks();
+	//std::cout << "Displaying Tasks sorted by difficulty:\n";
+	//collection.displayTasksByDifficulty();
+	//std::cout << "Displaying Tasks sorted by estimated time:\n";
+	//collection.displayTasksByEstimatedTime();
+	//std::cout << "\n";
 	
 }
 
 
 int main() {
 	Logger& logger = Logger::getInstance();
-	testLogging(logger);
-	logger.clearLogs();
+	//testLogging(logger);
+	//logger.clearLogs();
 
-	testTask();
+	//testTask();
 	//logger.printLogs();
-	logger.clearLogs();
+	//logger.clearLogs();
 
 	testTaskCollection(); 
-	//logger.printLogs();
+	logger.printLogs();
 	//logger.printLogsSortedByClass();
 	logger.clearLogs();
 
 	return 0;
 }
+*/
