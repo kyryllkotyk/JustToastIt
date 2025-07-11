@@ -14,6 +14,9 @@
 #define MINDIFF 1 // Minimum Difficulty
 #define MAXTIME 600000 // Maximum Estimated Completion Time (In Minutes)
 #define MINTIME 60 // Minimum Estimated Completion Time (In Minutes)
+#define MAXNAME 200 // Maximum String Size
+#define MAXDUEDATE 60000000 // Maximum Minutes From Now to the Due Date
+
 //TODO:: Maximum due date?
 //TODO:: ADD A PRECISION METER FOR SYSTEM_CLOCK.NOW()!! It is more precise than the input
 //TODO:: If buggy, ensure that everything was converted to minute precision. mintime and 
@@ -21,12 +24,12 @@
 //TODO:: Ensure defaulting behavior for misinput 
 //TODO:: ensure time > 23:59 cannot be entered
 //TODO:: confirmed, misinput still goes through. needs to be fixed
+//TODO:: add an optional description string, where the user can add more details
 class Task
 {
 public:
 	Task();
-	Task(std::string& assignedName, int uniqueID, 
-		short diff, int time, std::string& due);
+	Task(std::string& assignedName, short diff, int time, std::string& due);	
 
 	/*
 	* @brief Converts string to a time point
@@ -73,6 +76,8 @@ public:
 	*/
 	std::string getName() const;
 
+	TIME_POINT getNotificationTime() const;
+
 	/*
 	* @brief Set the difficulty of the task
 	* @param New difficulty value
@@ -105,13 +110,16 @@ public:
 	*/
 	void setDueDate(TIME_POINT& newPoint); //TODO:: Add guarding against extreme due dates
 
+	void setNotificationTime(TIME_POINT& newPoint);
+
 private:
-	std::string name; // Task's name (USER INPUT)
-	short estimatedDifficulty; // Estimated difficulty of the task (USER INPUT)
-	int estimatedTime; // Estimated completion time (USER INPUT)
-	int ID; // Private ID of the task, assigned by TaskCollection
+	std::optional<std::string> name; // Task's name (USER INPUT)
+	std::optional<short>  estimatedDifficulty; // Estimated difficulty of the task (USER INPUT)
+	std::optional<int> estimatedTime; // Estimated completion time (USER INPUT)
+	std::optional<int>  ID; // Private ID of the task, assigned by TaskCollection
 
 	// Used to compare against current time to determine how much time is left
 	TIME_POINT dueDate;
+	std::optional<TIME_POINT> notificationTime; // Calculated by Scheduler
 };
 #endif

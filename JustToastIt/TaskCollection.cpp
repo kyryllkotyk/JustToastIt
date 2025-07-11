@@ -41,7 +41,7 @@ void TaskCollection::createAndAddTask(std::string& name, short estDiff,
 	int estTime, std::string& dueDate)
 {
 	// Create task from given parameters
-	Task task(name, -1, estDiff, estTime, dueDate);
+	Task task(name, estDiff, estTime, dueDate);
 	// Add this task to the collection
 	(*this).addTask(task);
 }

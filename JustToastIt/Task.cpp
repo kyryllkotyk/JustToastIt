@@ -2,17 +2,12 @@
 
 Task::Task()
 {
-	name = "";
-	estimatedDifficulty = -1;
-	estimatedTime = -1;
-	ID = -1;
 	dueDate = std::chrono::system_clock::now();
 }
 
-Task::Task(std::string& assignedName, int uniqueID, short diff, 
+Task::Task(std::string& assignedName, short diff, 
 	int time, std::string& due) {
 	setName(assignedName);
-	setID(uniqueID);
 	setDifficulty(diff);
 	setEstimatedTime(time);
 	TIME_POINT newDueDate = stringToTimePoint(due);
@@ -59,12 +54,12 @@ TIME_POINT Task::stringToTimePoint(std::string& dueDate) const
 
 const short Task::getDifficulty() const
 {
-	return estimatedDifficulty;
+	return estimatedDifficulty.value_or(-1);
 }
 
 const int Task::getEstimatedTime() const
 {
-	return estimatedTime;
+	return estimatedTime.value_or(-1);
 }
 
 TIME_POINT Task::getDueDate() const
@@ -99,31 +94,41 @@ int Task::getDueDateInMinutes() const {
 
 const int Task::getID() const
 {
-	return ID;
+	return ID.value_or(-1);
 }
 
 std::string Task::getName() const
 {
-	return name;
+	return name.value_or("[Not Set]");
 }
 
 bool Task::setDifficulty(short& newDiff)
 {
 	// Check whether the new difficulty is in bounds
-	if (newDiff <= MINDIFF || newDiff > MAXDIFF) {
+	if (newDiff < MINDIFF || newDiff > MAXDIFF) {
 		LOG("Task", "Difficulty input out of bounds", true);
 		return false;
 	}
 	// Update the difficulty
 	estimatedDifficulty = newDiff;
-	LOG("Task", "Task ID: " + std::to_string(ID) +
-		" difficulty set to " + std::to_string(estimatedDifficulty), false);
+	std::string idPrint = ID.has_value() ? std::to_string(*ID) : "[Not Set]";
+	std::string estDiff = estimatedDifficulty.has_value() 
+		? std::to_string(*estimatedDifficulty) : "[Not Set]";
+
+	LOG("Task", "Task ID: " + idPrint+
+		" difficulty set to " + estDiff, false);
 	return true;
 }
 
 void Task::setName(std::string& newName)
 {
+	if (newName.size() > MAXNAME) {
+		LOG("Task", "Name input out of bounds", true);
+		return;
+	}
+	std::string idPrint = ID.has_value() ? std::to_string(*ID) : "[Not Set]";
 	name = newName;
+	LOG("Task", "Task ID: " + idPrint + " name set to " + *name, false);
 }
 
 bool Task::setEstimatedTime(int& newTime)
@@ -133,8 +138,13 @@ bool Task::setEstimatedTime(int& newTime)
 		return false;
 	}
 	estimatedTime = newTime;
-	LOG("Task", "Task ID: " + std::to_string(ID) +
-		" time set to " + std::to_string(newTime), false);
+
+	std::string idPrint = ID.has_value() ? std::to_string(*ID) : "[Not Set]";
+	std::string estTimePrint = estimatedTime.has_value()
+		? std::to_string(*estimatedTime) : "[Not Set]";
+	
+	LOG("Task", "Task ID: " + idPrint +
+		" time set to " + estTimePrint, false);
 	return true;
 }
 
@@ -143,10 +153,21 @@ void Task::setID(int& newID)
 	// No error handling as all ID changes will be done by TaskCollection
 	// The user has no control over this.
 	ID = newID;
-	LOG("Task", "New Task ID Set: " + std::to_string(ID), false);
+
+	std::string idPrint = ID.has_value() ? std::to_string(*ID) : "[Not Set]";
+	LOG("Task", "New Task ID Set: " + idPrint, false);
 }
 
 void Task::setDueDate(TIME_POINT& newPoint)
 {
+	TIME_POINT copy = dueDate;
 	dueDate = newPoint;
+	if (getDueDateInMinutes() > MAXDUEDATE) {
+		dueDate = copy;
+		LOG("Task", "Due date input out of bounds", true);
+		return;
+	}
+	std::string idPrint = ID.has_value() ? std::to_string(*ID) : "[Not Set]";
+	LOG("Task", "Task ID: " + idPrint + " due date set to " +
+		std::to_string(getDueDateInMinutes()) + " minutes from now", false);
 }
