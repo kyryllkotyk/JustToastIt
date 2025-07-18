@@ -161,7 +161,7 @@ void Task::setID(int& newID)
 void Task::setDueDate(TIME_POINT& newPoint)
 {
 	TIME_POINT copy = dueDate;
-	dueDate = newPoint;
+	dueDate = floor<std::chrono::minutes>(newPoint);
 	if (getDueDateInMinutes() > MAXDUEDATE) {
 		dueDate = copy;
 		LOG("Task", "Due date input out of bounds", true);
