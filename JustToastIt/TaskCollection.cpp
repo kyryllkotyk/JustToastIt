@@ -76,6 +76,11 @@ bool TaskCollection::removeTask(const int id)
 	return false;
 }
 
+std::vector<Task> TaskCollection::getTasks()
+{
+	return tasks;
+}
+
 
 int TaskCollection::partition(std::vector<Task>& vec, int high, 
 	int low, char sortBy) {
