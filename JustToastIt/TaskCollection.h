@@ -27,10 +27,11 @@ public:
 	void createAndAddTask(std::string& name, short estDiff,
 		int estTime, std::string& dueDate);
 
-
 	bool removeTask(const std::string& taskName);
 	
 	bool removeTask(const int id);
+
+	std::vector<Task> getTasks() const;
 
 private:
 	void quickSort(std::vector<Task>& vec, int high, int low, char sortBy);
