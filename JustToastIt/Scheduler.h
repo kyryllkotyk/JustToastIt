@@ -1,30 +1,33 @@
 #ifndef SCHEDULER_H_
 #define SCHEDULER_H_
 
+#include <atomic>
 #include "TaskCollection.h"
-#include "Toast.h"
 
 class Scheduler
 {
 public:
-	Scheduler() = default;
+	Scheduler() : continueThread(true) {};
+	~Scheduler();
+	void work(TaskCollection& collection);
+
 private:
-	void threadWorking(const TaskCollection& collection);
+	void threadWorking(TaskCollection& collection);//HANDLE REMOVING FROM TASKCOLLECTION!!!!
+	void displayToast(const Task& task);
+	int minutesRemaining(const Task& task);
+
 	std::mutex schedulerMutex;
 	std::thread processingThread; // Background thread for pushing toasts
-	Toast toaster;
+	std::atomic<bool> continueThread; // For clean termination
 
 	Scheduler(Scheduler& schedule) = delete;
-	// could make task collection check all task's dueDateInMinutes
-	// and if it reaches zero, call the scheduler
-	// OR
-	// the scheduler itself is responsible for checking the due dates
-	// so it calls the task collection 
-	// opt1 seems better, TODO:: investigate
 
 	//in a thread, wake up once a minute, check whether the time point due date 
 	//matches now() !!MINUTE PRECISION!! for every Task, if any match, add them to
 	//Toast's queue
+
+	//TODO:: Handle starting at exactly the start of a new minute, including after PC restart.
+	
 
 };
 

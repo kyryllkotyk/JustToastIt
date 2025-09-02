@@ -38,19 +38,17 @@ public:
 	//TODO:: printLogsByError
 
 	void clearLogs();
+
+	std::string retrieveLastLog();
+
 private:
-	std::mutex logMutex; // For locking data
 	typedef struct {
 		std::chrono::system_clock::time_point time; //TODO:: delete?
 		std::string className;
 		std::string message;
 		bool error;
 	} Log; // Logging structure that keeps all needed information
-
-	std::vector<Log> logs; // Storage of all the logs in the order of arrival
-	Logger() = default; 
-	Logger(const Logger&) = delete; // Disables use of copy constructor
-	Logger& operator=(const Logger&) = delete; // Disables use of copy assignment operator
+	//TODO:: create a log file that saves all logs (useful in case of crash!!!)
 
 	/*
 	* @brief Support method for quicksorting logs
@@ -65,8 +63,15 @@ private:
 	* @param Bounds of the array 
 	*/
 	void quickSort(std::vector<Log>& vec, int high, int low);
+
+	Logger() = default;
+	Logger(const Logger&) = delete; // Disables use of copy constructor
+	Logger& operator=(const Logger&) = delete; // Disables use of copy assignment operator
+	
+	std::mutex logMutex; // For locking data
+	std::vector<Log> logs; // Storage of all the logs in the order of arrival
 };
-//TODO:: alertUserMisinput(int errorNum) <-- sets of alarms and prints them 
-// (see last proj in 430 for similar)
+//TODO:: alertUserMisinput(int errorNum) <-- sets off alarms and prints them 
+// (see last proj in 430 for similar), could use enum instead of int
 
 #endif

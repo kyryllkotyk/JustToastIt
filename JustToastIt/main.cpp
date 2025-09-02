@@ -1,8 +1,14 @@
+#include <iostream>
+#include <signal.h>
+#include <stdio.h>
+#include <stdlib.h>
+
 #include "Logger.h"
 #include "Scheduler.h"
 #include "Task.h"
 #include "TaskCollection.h"
-#include <iostream>
+#include "InputReader.h"
+
 
 void printGuide() {
 	//TODO:: Allow for a direct time entry, "TaskName Time
@@ -56,9 +62,33 @@ void acceptInput(TaskCollection collection) {
 	exit(0);
 }
 
+//TODO:: Handle restarting
+	// On startup, Storage class should fill in TaskCollection with stored information
+	// Every time TaskCollection is modified, Storage is modified as well in the same way
+//TODO:: Schedule interactions		
+
+void handleSig(int sig) {
+	exit(0); //so atexit works!
+}
+
 //int main() {
-//	TaskCollection collection;
-//	std::cout <<
-//		"Welcome to the toast notifier!\nEnter 'GUIDE' to learn how it works!\n";
-//	acceptInput(collection);
+//	signal(SIGINT, handleSig);
+//	signal(SIGTERM, handleSig);
+//
+//	static TaskCollection collection;
+//	InputReader reader;
+//	Scheduler scheduler;
+//
+//	std::cout << "Welcome to JustToastIt! Please enter a command.\n";
+//	std::cout << "Enter \"help\" for manual\n";
+//	scheduler.work(collection);
+//
+//	atexit([] {
+//		collection.updateFile();
+//	});
+//
+//	while (true) {
+//		reader.read(collection);
+//		std::cout << "\nPlease enter a command (\"help\" for manual)!\n";
+//	}
 //}

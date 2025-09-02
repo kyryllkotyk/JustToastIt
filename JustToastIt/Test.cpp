@@ -2,6 +2,7 @@
 #include "Logger.h"
 #include "Task.h"
 #include "TaskCollection.h"
+#include "Scheduler.h"
 #include <ctime> // for random generation
 #include <cstdlib> // for random generation
 #include "catch_amalgamated.hpp"
@@ -19,13 +20,19 @@ Task create(std::string name, short diff, int time, int minutesFromNow) {
 	return task;
 }
 
-std::string randomStringGenerator(int min, int max) {
-	srand(time(0));
+std::string rsg(int min, int max) {
+	
 	std::string ret = "";
 	int randomNumber = rand() % (max - min + 1) + min;
 	for (int i = 0; i < randomNumber; i++) {
 		//ASCII 48 - 122
-		ret += char(rand() % 75 + 48);
+		char add = char(rand() % 75 + 48);
+		if (!std::isprint(static_cast<unsigned char>(add)) || add == '\\') {
+			i--;
+		}
+		else {
+			ret += add;
+		}
 	}
 	return ret;
 }
@@ -162,6 +169,7 @@ TEST_CASE("Task Name Input", "[Task]") {
 
 TEST_CASE("Task Date Input", "[Task]") {
 	//TODO:: create farthest due date
+
 }
 
 TEST_CASE("Task Collection Task Input", "[TaskCollection]") {
@@ -171,6 +179,42 @@ TEST_CASE("Task Collection Task Input", "[TaskCollection]") {
 TEST_CASE("Task Collection ID Assignment", "[TaskCollection]") {
 
 }
+
+// NOTE: Not ideal for testing. When adding 1 sec wait, it'll wait 1 minute
+// before joining the thread, if not waiting, the background thread
+// will never execute, so the tasks will never get toasted. 
+// This will be fine in a non testing environment.
+// Possible fix is to add a testing boolean, and change the sleep timer
+// in the work method based on its' value.
+// 
+//TEST_CASE("Scheduler toasting", "[Scheduler]") {
+//	TaskCollection collection;
+//	Task task = create("One", 5, 125, 0);
+//	Task task2 = create("Two", 5, 124, 0);
+//	collection.addTask(task);
+//	collection.addTask(task2);
+//
+//	Scheduler schedule;
+//	schedule.work(collection);
+//}
+
+
+TEST_CASE("Benchmarks") {	
+	BENCHMARK("Many tasks") {
+		TaskCollection collection;
+		for (int i = 0; i < MAX_TESTS * 100; i++) {
+			Task task("name", 5, 652, "2025-12-15 18:57", collection.getDueDateFormat(), 
+				collection.getTimeZone(), true);
+			collection.addTask(task);
+		}
+	};
+}
+
+
+
+
+
+
 
 /* !! Legacy Testing !! 
 void testLogging(Logger& logger) {

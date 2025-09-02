@@ -2,8 +2,22 @@
 
 TaskCollection::TaskCollection()
 {
-	tasks = std::vector<Task>(0);
 	currentIDAssignment = 0;
+	// Restore tasks 
+	std::ifstream taskFile(getFilePath("tasks.txt"));
+	std::string taskInfo;
+	while (getline(taskFile, taskInfo)) {
+		Task task = parseTaskLine(taskInfo);
+		tasks.emplace_back(task);
+		if (task.getID() > currentIDAssignment) {
+			currentIDAssignment = task.getID() + 1;
+		}
+	}
+	taskFile.close();
+
+	// Restore config settings
+	std::ifstream configFile(getFilePath("config.txt"));
+	readConfig(configFile);
 }
 
 void TaskCollection::displayTasks()
@@ -26,6 +40,21 @@ void TaskCollection::displayTasksByEstimatedTime()
 	displayHelper(tasksCopy);
 }
 
+void TaskCollection::displayArchive()
+{
+	std::ifstream taskFile(getFilePath("archived.txt")); 
+	std::string taskInfo;
+	while (getline(taskFile, taskInfo)) {
+		Task task = parseTaskLine(taskInfo);
+		std::cout << "Task " << task.getID()
+			<< ": " << task.getName()
+			<< " [Diff: " << task.getDifficulty()
+			<< ", Time: " << task.getEstimatedTime()
+			<< ", Due: " << task.getDueDateString()
+			<< "]\n";
+	}
+}
+
 
 void TaskCollection::addTask(Task& task)
 {
@@ -37,35 +66,24 @@ void TaskCollection::addTask(Task& task)
 	currentIDAssignment++;
 }
 
-void TaskCollection::createAndAddTask(std::string& name, short estDiff,
-	int estTime, std::string& dueDate)
+int TaskCollection::createAndAddTask(std::string& name, short estDiff,
+	int estTime, std::string& dueDate, bool debugStatus)
 {
 	// Create task from given parameters
-	Task task(name, estDiff, estTime, dueDate);
+	Task task(name, estDiff, estTime, dueDate, dueDateFormat, timeZone, debugStatus);
 	// Add this task to the collection
 	(*this).addTask(task);
-}
-
-bool TaskCollection::removeTask(const std::string& taskName)
-{
-	for (int i = 0; i < tasks.size(); i++) {
-		// Checks whether the element's name matches the name to remove
-		if (tasks[i].getName() == taskName) {
-			// Erases the task at the found position
-			tasks.erase(tasks.begin() + i);
-			LOG("TaskCollection", "RemoveTaskByName: Removed " + taskName, false);
-			return true;
-		}
-	}
-	LOG("TaskCollection", "RemoveTaskByName: Name not found in collection", true);
-	return false;
+	return currentIDAssignment - 1;
 }
 
 bool TaskCollection::removeTask(const int id)
 {
+	std::lock_guard<std::mutex> lock(saveMutex);
+
 	for (int i = 0; i < tasks.size(); i++) {
 		// Checks whether the element's ID matches the ID to remove
 		if (tasks[i].getID() == id) {
+			archiveTask(tasks[i]);
 			// Erases the task at the found position
 			tasks.erase(tasks.begin() + i);
 			LOG("TaskCollection", "RemoveTaskByID: Removed " + std::to_string(id), false);
@@ -78,7 +96,156 @@ bool TaskCollection::removeTask(const int id)
 
 std::vector<Task> TaskCollection::getTasks()
 {
+	std::lock_guard<std::mutex> lock(saveMutex);
 	return tasks;
+}
+
+std::string TaskCollection::getDueDateFormat() const
+{
+	return dueDateFormat;
+}
+
+const std::chrono::time_zone* TaskCollection::getTimeZone() const
+{
+	return timeZone;
+}
+
+void TaskCollection::updateFile()
+{
+	char delim = '\x1F';
+
+	std::lock_guard<std::mutex> lock(saveMutex);
+
+	std::ofstream file(getFilePath("tasks.txt"));
+	for (const Task& task : tasks) {
+		file << task.getName() << delim
+			<< task.getDifficulty() << delim
+			<< task.getEstimatedTime() << delim
+			<< task.getDueDateString() << delim
+			<< task.getID() << '\n';
+	}
+
+	file.close();	
+}
+
+void TaskCollection::setDueDateFormat(const std::string& format)
+{
+	dueDateFormat = format;
+	saveConfig();
+}
+
+void TaskCollection::setTimeZone(const std::string& tz)
+{
+	if (!tz.empty()) {
+		try {
+			timeZone = std::chrono::locate_zone(tz);
+		}
+		catch (const std::runtime_error&) {
+			timeZone = std::chrono::current_zone(); // fallback
+			LOG("TaskCollection",
+				"Incorrect time zone entered, changed to current zone as fallback"
+				, true);
+		}
+	}
+	else {
+		timeZone = std::chrono::current_zone();
+	}
+	saveConfig();
+}
+
+void TaskCollection::archiveTask(const Task& task)
+{
+	char delim = '\x1F';
+	bool lockedHere = saveMutex.try_lock();
+	std::ofstream file(getFilePath("config.txt"), std::ios::app);
+	
+	file << task.getName() << delim
+		<< task.getDifficulty() << delim
+		<< task.getEstimatedTime() << delim
+		<< task.getDueDateString() << delim
+		<< task.getID() << '\n';
+
+	if (lockedHere) {
+		saveMutex.unlock();
+	}
+}
+
+Task TaskCollection::parseTaskLine(const std::string& taskInfo, char delim) {
+	std::string args[5];
+	int currentPos = 0, count = 0;
+	size_t found = taskInfo.find(delim, currentPos);
+
+	while (found != std::string::npos && count < 4) {
+		args[count] = taskInfo.substr(currentPos, found - currentPos);
+		currentPos = found + 1;
+		found = taskInfo.find(delim, currentPos);
+		count++;
+	}
+	args[count] = taskInfo.substr(currentPos);
+
+	Task task;
+	task.setName(args[0]);
+	task.setDifficulty(stoi(args[1]));
+	task.setEstimatedTime(stoi(args[2]));
+	task.setDueDateString(args[3], dueDateFormat, timeZone);
+	task.setID(stoi(args[4]));
+	return task;
+}
+
+void TaskCollection::readConfig(std::ifstream& file)
+{
+	const std::string tzKey = "time_zone:";
+	const std::string ddfKey = "due_date_option:";
+	const std::string atKey = "american_time:";
+	std::string configLine = "";
+
+	int pos = 0;
+	while (getline(file, configLine)) {
+		pos = configLine.find(tzKey);
+		if (pos != std::string::npos) {
+			std::string tz = configLine.substr(pos + tzKey.size());
+			setTimeZone(tz);
+			continue;
+		}
+		
+		pos = configLine.find(ddfKey);
+		if (pos != std::string::npos) {
+			setDueDateFormat(configLine.substr(pos + ddfKey.size()));
+			continue;
+		}
+
+		pos = configLine.find(atKey);
+		if (pos != std::string::npos) {
+			std::string check = configLine.substr(pos + ddfKey.size());
+			if (check == "true") {
+				continue;
+			}
+			continue;
+		}
+	}
+}
+
+void TaskCollection::saveConfig() {
+	std::ofstream file(getFilePath("config.txt"));
+	file << "time_zone:" << getTimeZone()->name() << "\n";
+	file << "due_date_format:" << getDueDateFormat() << "\n";
+	file.close();
+}
+
+std::filesystem::path TaskCollection::getFilePath(std::string taskName) {
+#ifdef _WIN32
+	// Windows
+	char* appdata = getenv("APPDATA");
+	std::filesystem::path dir = appdata ? appdata : ".";
+#else
+	// Linux / Mac
+	char* home = getenv("HOME");
+	std::filesystem::path dir = home ? (std::string(home) + "/.config") : ".";
+#endif
+
+	dir /= "JustToastIt";
+	std::filesystem::create_directories(dir);
+	return dir / taskName;
 }
 
 
@@ -125,11 +292,13 @@ void TaskCollection::displayHelper(std::vector<Task>& vec)
 {
 	for (int i = 0; i < vec.size(); i++) {
 		std::cout << "[Name] " << vec[i].getName() << " "
+			<< "[ID] " << vec[i].getID() << " "
 			<< "[Estimated Time (min)] " << vec[i].getEstimatedTime() << " "
 			<< "[Difficulty] " << vec[i].getDifficulty() << " "
 			<< "[Due Date (min)] " << vec[i].getDueDateInMinutes() << "\n";
 	}
 }
+
 
 void TaskCollection::quickSort(std::vector<Task>& vec, int high, int low, char sortBy)
 {

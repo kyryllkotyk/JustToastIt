@@ -5,51 +5,43 @@ Task::Task()
 	dueDate = std::chrono::system_clock::now();
 }
 
-Task::Task(std::string& assignedName, short diff, 
-	int time, std::string& due) {
+Task::Task(const std::string& assignedName, short diff, 
+	int time, const std::string& due, 
+	const std::string& dueDateFormat, const std::chrono::time_zone* zone,
+	bool debugStatus) 
+{
 	setName(assignedName);
 	setDifficulty(diff);
 	setEstimatedTime(time);
-	TIME_POINT newDueDate = stringToTimePoint(due);
-	setDueDate(newDueDate);
+	//TODO:: 
+	setDueDateString(due, dueDateFormat, zone); 
+	setDebug(debugStatus);
+	//TODO:: Add a guard for each setter, logging if failed
 }
 
-TIME_POINT Task::stringToTimePoint(std::string& dueDate) const
+TIME_POINT Task::stringToTimePoint(const std::string& dueDate, 
+	const std::string& dueDateFormat, 
+	const std::chrono::time_zone* zone) const
 {
-	TIME_POINT point;
-	std::istringstream stream(dueDate);
-	
-	// Convert from UTC to local time
-	std::chrono::local_time<std::chrono::minutes> localPoint;
-	// Parse the due date into local time
-	stream >> std::chrono::parse("%F %R", localPoint);
-
-	// !! Uncomment to Debug !! 
-	/*
-	LOG("Task", "Parsed epoch minutes: " +
-		std::to_string(std::chrono::duration_cast<std::chrono::minutes>
-			(point.time_since_epoch()).count()), true);
-	*/
-
-
-	if (stream.fail()) {
-		LOG("Task", "Failed string parse", true);
-		return std::chrono::system_clock::now();
+	//TIME_POINT point;
+	//std::stringstream stream(dueDate);
+	//
+	//// Convert from UTC to local time
+	//std::chrono::local_time<std::chrono::minutes> localPoint;
+	//// Parse the due date into local time
+	//stream >> std::chrono::parse("%F %R", localPoint);
+	//^^ Replaced with below
+	auto result = parseDueDate(dueDate, dueDateFormat);
+	if (!result.has_value()) {
+		return TIME_POINT{}; //TODO:: change the return to optional time point
+		//and change this part
 	}
-	LOG("Task", "Successful string parse of string: " + dueDate, false);
 
-	// !! Uncomment To Debug !!
-	/*
-	int timeInMinutes =
-		std::chrono::duration_cast<std::chrono::minutes>(point.time_since_epoch()).count();
-	LOG("Task", "(StringToTimePointDebug) :: Time in minutes from epoch: " 
-		+ std::to_string(timeInMinutes), true);
-	*/
-	
-	// Convert the timezone-less point into local timezone time
-	auto zonedTime = std::chrono::zoned_time{ std::chrono::current_zone(), localPoint };
-	point = zonedTime.get_sys_time();
-	return point;
+	TIME_POINT point = result.value();
+	std::chrono::zoned_time zonedTime(zone, point);
+
+	//Round down to minute before returning
+	return zonedTime.get_sys_time();
 }
 
 const short Task::getDifficulty() const
@@ -102,10 +94,20 @@ std::string Task::getName() const
 	return name.value_or("[Not Set]");
 }
 
-bool Task::setDifficulty(short& newDiff)
+std::string Task::getDueDateString() const
+{
+	return dueDateString.value_or("[Not Set]");
+}
+
+bool Task::getDebug() const
+{
+	return debug;
+}
+
+bool Task::setDifficulty(short newDiff)
 {
 	// Check whether the new difficulty is in bounds
-	if (newDiff < MINDIFF || newDiff > MAXDIFF) {
+	if (newDiff < MIN_DIFF || newDiff > MAX_DIFF) {
 		LOG("Task", "Difficulty input out of bounds", true);
 		return false;
 	}
@@ -120,9 +122,9 @@ bool Task::setDifficulty(short& newDiff)
 	return true;
 }
 
-void Task::setName(std::string& newName)
+void Task::setName(const std::string& newName)
 {
-	if (newName.size() > MAXNAME) {
+	if (newName.size() > MAX_NAME) {
 		LOG("Task", "Name input out of bounds", true);
 		return;
 	}
@@ -131,9 +133,9 @@ void Task::setName(std::string& newName)
 	LOG("Task", "Task ID: " + idPrint + " name set to " + *name, false);
 }
 
-bool Task::setEstimatedTime(int& newTime)
+bool Task::setEstimatedTime(int newTime)
 {
-	if (newTime < MINTIME || newTime > MAXTIME) {
+	if (newTime < MIN_TIME || newTime > MAX_TIME) {
 		LOG("Task", "Time input out of bounds", true);
 		return false;
 	}
@@ -148,7 +150,7 @@ bool Task::setEstimatedTime(int& newTime)
 	return true;
 }
 
-void Task::setID(int& newID) 
+void Task::setID(int newID) 
 {
 	// No error handling as all ID changes will be done by TaskCollection
 	// The user has no control over this.
@@ -158,11 +160,16 @@ void Task::setID(int& newID)
 	LOG("Task", "New Task ID Set: " + idPrint, false);
 }
 
-void Task::setDueDate(TIME_POINT& newPoint)
+void Task::setDebug(bool debugStatus)
+{
+	debug = debugStatus;
+}
+
+void Task::setDueDate(const TIME_POINT& newPoint)
 {
 	TIME_POINT copy = dueDate;
 	dueDate = floor<std::chrono::minutes>(newPoint);
-	if (getDueDateInMinutes() > MAXDUEDATE) {
+	if (getDueDateInMinutes() > MAX_DUE_DATE) {
 		dueDate = copy;
 		LOG("Task", "Due date input out of bounds", true);
 		return;
@@ -171,3 +178,207 @@ void Task::setDueDate(TIME_POINT& newPoint)
 	LOG("Task", "Task ID: " + idPrint + " due date set to " +
 		std::to_string(getDueDateInMinutes()) + " minutes from now", false);
 }
+
+void Task::setDueDateString(const std::string& newDueDate, 
+	const std::string& dueDateFormat, const std::chrono::time_zone* zone)
+{
+	setDueDate(stringToTimePoint(newDueDate, dueDateFormat, zone));
+	dueDateString = newDueDate;
+	//TODO:: add guarding against misinput.
+}
+
+std::optional<TIME_POINT> Task::parseDueDate(const std::string& dueDate,
+	const std::string& dueDateFormat) const
+{
+	auto it = formatParsers.find(dueDateFormat);
+
+	if (it != formatParsers.end()) {
+		TIME_POINT p = it->second(dueDate);
+		if (p != TIME_POINT{}) {
+			return p;
+		}
+		return std::nullopt;
+	}
+
+	try {
+		std::stringstream stream(dueDate);
+		std::chrono::sys_time<std::chrono::minutes> sysTime;
+
+		stream >> std::chrono::parse(dueDateFormat, sysTime);
+
+		if (stream.fail()) {
+			return std::nullopt; //fail
+		}
+
+		return sysTime;
+	}
+	catch (const std::format_error&) {
+		return std::nullopt; //fail
+	}
+}
+
+int64_t Task::timeSinceEpoch(int year, int month, int day, int hours, int minutes)
+{
+	int64_t ans = 0;
+	int leapDays = 0;
+	// Starting from development year to the scheduled year, calculate leap day #
+	for (int i = 1970; i < year; i++) {
+		if (i % 4 == 0 && (i % 100 != 0 || i % 400 == 0)) {
+			leapDays++;
+		}
+	}
+	if (year % 4 == 0 &&
+		(year % 100 != 0 || year % 400 == 0) && 
+		month > 2) {
+		leapDays++;
+	}
+	
+	ans = (year - 1970) * 365LL * 86400;
+	
+	for (int m = month - 1; m >= 1; m--) {
+		// February
+		if (m == 2) {
+			ans += 28 * 86400;
+		}
+		else if ((m < 8 && m % 2 == 0) ||
+			(m >= 8 && m % 2 == 1)) {
+			ans += 30 * 86400;
+		}
+		else {
+			ans += 31 * 86400;
+		}
+	}
+
+	ans += (day - 1) * 86400;
+	ans += leapDays * 86400;
+	
+	ans += hours * 3600;
+	ans += minutes * 60;
+	return ans;
+}
+
+const std::unordered_map<std::string,
+	std::function<TIME_POINT(const std::string&)>>
+	Task::formatParsers = {
+	/*
+	* Extract year, month, day, hours, and minutes from string
+	* using stoi. Then, calculate time from Jan 1st 1970 00:00 to the found params
+	* Watch out for misinput, but let the setter worry about maximum time. 
+	* Specifically, check whether its a number before calling stoi
+	* If misinput is found, throw an invalid argument error and print the error
+	*/
+
+	// Default
+	{ "%F %R", [](const std::string& input) -> TIME_POINT {
+		// "YYYY-MM-DD HH:MM"
+		//  0123456789012345
+		try {
+			if (input.size() != 16) {
+				throw(std::invalid_argument("Input doesn't match format"));
+			}
+		}
+		catch (const std::invalid_argument& inv) {
+			std::cerr << "Input doesn't match the set due date format";
+			return TIME_POINT{};
+		}
+
+		int year, month, day, hours, minutes;
+		try {
+			year = stoi(input.substr(0, 4));
+		}
+		catch (const std::invalid_argument& e) {
+			// Default to current year	
+			auto today = floor<std::chrono::days>(std::chrono::system_clock::now());
+			std::chrono::year_month_day ymd{ today };
+			year = int(ymd.year());
+		}
+
+		try {
+			month = stoi(input.substr(5, 2));
+		}
+		catch (const std::invalid_argument& e) {
+			// Default to current month
+			auto today = floor<std::chrono::days>(std::chrono::system_clock::now());
+			std::chrono::year_month_day ymd{ today };
+			month = unsigned(ymd.month());
+		}
+
+		try {
+			day = stoi(input.substr(8, 2));
+		}
+		catch (const std::invalid_argument& e){
+			// Default to today
+			auto today = floor<std::chrono::days>(std::chrono::system_clock::now());
+			std::chrono::year_month_day ymd{ today };
+			day = unsigned(ymd.day());
+		}
+
+		try {
+			hours = stoi(input.substr(11, 2));
+		}
+		catch (const std::invalid_argument& e) {
+			// Default to last hour of the day
+			hours = 23;
+		}
+
+		try {
+			minutes = stoi(input.substr(14, 2));
+		}
+		catch (const std::invalid_argument& e) {
+			// Default to 59, the last minute possible
+			minutes = 59;
+		}
+
+		// Use the collected information to turn into TIME_POINT
+		int64_t fromEpoch = timeSinceEpoch(year, month, day, hours, minutes);
+		return TIME_POINT{ std::chrono::seconds{fromEpoch} };
+	}},
+
+	// Common styles
+	{ "%Y/%m/%d %H:%M", [](const std::string& input) -> TIME_POINT {
+		// "YYYY/MM/DD HH:MM"
+		return TIME_POINT{};
+	}},
+	
+	{ "%d-%m-%Y %H:%M", [](const std::string& input) -> TIME_POINT {
+		// "DD-MM-YYYY HH:MM"
+		return TIME_POINT{};
+	}},
+
+	// American styles
+	{ "%m/%d/%Y %I:%M %p", [](const std::string& input) -> TIME_POINT {
+		// "MM/DD/YYYY HH:MM AM/PM"
+		return TIME_POINT{};
+	}},
+	
+	{ "%B %d, %Y %I:%M %p", [](const std::string& input) -> TIME_POINT {
+		// "Month DD, YYYY HH:MM AM/PM"
+		return TIME_POINT{};
+	}},
+
+	{ "%m-%d-%y %I:%M %p", [](const std::string& input) -> TIME_POINT {
+		// "MM-DD-YY HH:MM AM/PM"
+		return TIME_POINT{};
+	}},
+
+	// Compact
+	{ "%y%m%d %H%M", [](const std::string& input) -> TIME_POINT {
+		// "YYMMDD HHMM"
+		return TIME_POINT{};
+	}},
+	
+	{ "%Y%m%dT%H%M", [](const std::string& input) -> TIME_POINT {
+		// "YYYYMMDDTHHMM"
+		return TIME_POINT{};
+	}},
+
+	// Words
+	{ "%A, %B %d %Y %H:%M", [](const std::string& input) -> TIME_POINT {
+		// "Monday, August 22 2025 19:45"
+		return TIME_POINT{};
+	}}
+
+	
+};
+
+

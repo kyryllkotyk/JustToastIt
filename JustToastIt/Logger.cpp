@@ -49,6 +49,7 @@ void Logger::printLogsSortedByClass()
 
 void Logger::clearLogs()
 {
+	std::lock_guard<std::mutex> lock(logMutex);
 	logs.clear();
 }
 
