@@ -23,14 +23,7 @@ TIME_POINT Task::stringToTimePoint(const std::string& dueDate,
 	const std::string& dueDateFormat, 
 	const std::chrono::time_zone* zone) const
 {
-	//TIME_POINT point;
-	//std::stringstream stream(dueDate);
-	//
-	//// Convert from UTC to local time
-	//std::chrono::local_time<std::chrono::minutes> localPoint;
-	//// Parse the due date into local time
-	//stream >> std::chrono::parse("%F %R", localPoint);
-	//^^ Replaced with below
+
 	auto result = parseDueDate(dueDate, dueDateFormat);
 	if (!result.has_value()) {
 		return TIME_POINT{}; //TODO:: change the return to optional time point
@@ -38,10 +31,14 @@ TIME_POINT Task::stringToTimePoint(const std::string& dueDate,
 	}
 
 	TIME_POINT point = result.value();
-	std::chrono::zoned_time zonedTime(zone, point);
+	auto offset = zone->get_info(std::chrono::time_point_cast<std::chrono::seconds>(
+		std::chrono::system_clock::now()
+	)).offset;
+	
+	point -= offset;
 
 	//Round down to minute before returning
-	return zonedTime.get_sys_time();
+	return point;
 }
 
 const short Task::getDifficulty() const
@@ -331,6 +328,7 @@ const std::unordered_map<std::string,
 
 		// Use the collected information to turn into TIME_POINT
 		int64_t fromEpoch = timeSinceEpoch(year, month, day, hours, minutes);
+		
 		return TIME_POINT{ std::chrono::seconds{fromEpoch} };
 	}},
 

@@ -80,16 +80,15 @@ bool TaskCollection::removeTask(const int id)
 {
 	std::lock_guard<std::mutex> lock(saveMutex);
 
-	for (int i = 0; i < tasks.size(); i++) {
-		// Checks whether the element's ID matches the ID to remove
-		if (tasks[i].getID() == id) {
-			archiveTask(tasks[i]);
-			// Erases the task at the found position
-			tasks.erase(tasks.begin() + i);
-			LOG("TaskCollection", "RemoveTaskByID: Removed " + std::to_string(id), false);
-			return true;
-		}
+	auto removed = std::erase_if(tasks, [id](const Task& task) {
+		return task.getID() == id;
+		});
+
+	if (removed > 0) {
+		LOG("TaskCollection", "RemoveTaskByID: Removed " + std::to_string(id), false);
+		return true;
 	}
+
 	LOG("TaskCollection", "RemoveTaskByID: ID not found in collection", true);
 	return false;
 }
