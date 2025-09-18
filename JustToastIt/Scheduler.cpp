@@ -21,18 +21,20 @@ void Scheduler::threadWorking(TaskCollection& collection)
 		{
 			std::lock_guard lock(schedulerMutex);
 			for (const Task& task : collection.getTasks()) {
-				//this is incorrect. It basically just pushes a task when the due dates are equal
-				//so it doesnt do any of the calculation. this will be changed after testing toast
-				//TODO:: change to some calculated pushing time
-				if (task.getDebug() && task.getDueDate() <= floor<std::chrono::minutes>
-					(std::chrono::system_clock::now())) {
+				if ((task.getDebug() && task.getDueDate() <= floor<std::chrono::minutes>
+					(std::chrono::system_clock::now()))
+					|| (!task.getDebug() && minutesRemaining(task) <= 0)) {
 					// StorageSolution.archiveTask
 					displayToast(task);
 					idsToRemove.push_back(task.getID());
 				}
-				else if (!task.getDebug() && minutesRemaining(task) <= 0) {
-					;
-				}
+				std::cout << "DEBUG: Task with ID " << task.getID()
+					<< " reminder in " << minutesRemaining(task) << " minutes.";
+
+				std::cout << "\nEstimated time: " << task.getEstimatedTime()
+					<< "\nEstimated diff: " << task.getDifficulty()
+					<< "\nMinutes until due date: " << task.getDueDateInMinutes() << "\n";
+
 			}
 
 			for (int& id : idsToRemove) {
@@ -64,6 +66,7 @@ int Scheduler::minutesRemaining(const Task& task)
 {
 	int dueDate = task.getDueDateInMinutes() - 
 		task.getEstimatedTime() * task.getDifficulty();
+	//TODO:: update formula for a better one.. this is just for testing purposes
 	return dueDate;
 	//TODO:: let the user set the formula / scaling
 }
