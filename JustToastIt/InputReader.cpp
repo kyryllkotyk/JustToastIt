@@ -165,7 +165,7 @@ void InputReader::executeCommand(std::vector<std::string>& tokens,
 		while (true) {
 			if (help == "commands" || help == "1") {
 				std::cout << "Possible commands:\n"
-					<< "To create tasks\n"
+					<< "To create tasks:\n"
 					<< "\tcreate\n\t"
 					<< "create \"Task Name\" estDiff estTime YYYY-MM-DD HH:MM\n\t"
 					<< "Note:\n\t\tNot case sensitive.\n\t\tDue time is optional. "
@@ -259,7 +259,9 @@ void InputReader::executeCommand(std::vector<std::string>& tokens,
 				}
 				collection.setTimeZone(tz);
 				std::cout << "Timezone set to: " << collection.getTimeZone()->name()
-					<< ". Note: If this doesn't match your desired area or input,"
+					<< ". Note:\n(1) Task due dates remain tied to " 
+					<< "their original time zone."
+					<< "(2) If this doesn't match your desired area or input,"
 					<< "\nit means that your input was not recognized."
 					<< " Refer to \"help\" to learn how to set this up\n";
 				return;
