@@ -47,14 +47,21 @@ void InputReader::executeCommand(std::vector<std::string>& tokens,
 
 		bool collectName = false;
 		for (int i = 1; i < tokens.size(); i++) {
-			bool hasDash = false, hasLetter = false, hasColon = false, hasNumber = false;
+			bool hasDelim = false, hasLetter = false, hasColon = false, hasNumber = false;
 
 			for (int j = 0; j < tokens[i].size(); j++) {
 				if (tokens[i][j] == '"' && (j == 0 || tokens[i][j - 1] != '\\')) {
 					collectName = !collectName;
 					continue;
 				}
-				if (tokens[i][j] == '-') hasDash = true;
+				if (tokens[i][j] == '-' || tokens[i][j] == '/' ||
+					tokens[i][j] == '|' || tokens[i][j] == '.' ||
+					tokens[i][j] == '~' || tokens[i][j] == '\'' ||
+					tokens[i][j] == '?' || tokens[i][j] == ',' ||
+					tokens[i][j] == '!') {
+					hasDelim = true;
+					tokens[i][j] = '-';
+				}
 				if (tokens[i][j] == ':') hasColon = true;
 				if ((tokens[i][j] >= 'a' && tokens[i][j] <= 'z')
 					|| (tokens[i][j] >= 'A' && tokens[i][j] <= 'Z')) hasLetter = true;
@@ -79,22 +86,22 @@ void InputReader::executeCommand(std::vector<std::string>& tokens,
 				debugStatus = true;
 			}
 
-			if (hasDash && !hasLetter && !hasColon && hasNumber) {
+			if (hasDelim && !hasLetter && !hasColon && hasNumber) {
 				firstDueDate = tokens[i];
 				continue;
 			}
 
-			if (!hasDash && !hasLetter && hasColon && hasNumber) {
+			if (!hasDelim && !hasLetter && hasColon && hasNumber) {
 				secondDueDate = tokens[i];
 				continue;
 			}
 
-			if (!hasDash && !hasLetter && !hasColon && hasNumber && diff == -1) {
+			if (!hasDelim && !hasLetter && !hasColon && hasNumber && diff == -1) {
 				diff = stoi(tokens[i]);
 				continue;
 			}
 
-			if (!hasDash && !hasLetter && !hasColon && hasNumber && time == -1) {
+			if (!hasDelim && !hasLetter && !hasColon && hasNumber && time == -1) {
 				time = stoi(tokens[i]);
 				continue;
 			}
@@ -201,7 +208,7 @@ void InputReader::executeCommand(std::vector<std::string>& tokens,
 	}
 
 	if (tokens[0] == "exit" || tokens[0] == "close") {
-		;
+		exit(0);
 	}
 
 	if (tokens[0] == "delete") {
@@ -227,18 +234,45 @@ void InputReader::executeCommand(std::vector<std::string>& tokens,
 			}
 
 			if (tokens[2] == "due") {
-				std::string formatString = joinTokens(tokens, 3);
-				if (formatString.empty()) {
-					std::cout << "Missing format string for due date.\n";
-					return;
+				while (true) {
+					std::cout << "Select a due date option:\n"
+						<< "Enter the corresponding option to select a format.\n"
+						<< "\t(1) YYYY-MM-DD HH:MM\n"
+						<< "\t(2) DD-MM-YYYY HH:MM\n"
+						<< "American (AM/PM)\n"
+						<< "\t(3) MM/DD/YYYY HH:MM AM/PM\n"
+						<< "\t(4) MM-DD-YY HH:MM AM/PM\n"
+						<< "Compact\n"
+						<< "\t(5) YYMMDD HH:MM\n"
+						<< "\t(6) View delimeter options\n";
+					int option;
+					std::cout << "Enter a number to select: ";
+					std::cin >> option;
+					switch (option) {
+					case(1):
+						collection.setDueDateFormat("%F %R");
+						return;
+					case(2):
+						collection.setDueDateFormat("%d-%m-%Y %H:%M");
+						return;
+					case(3):
+						collection.setDueDateFormat("%m/%d/%Y %I:%M %p");
+						return;
+					case(4):
+						collection.setDueDateFormat("%m-%d-%y %I:%M %p");
+						return;
+					case(5):
+						collection.setDueDateFormat("%y%m%d %H%M");
+						return;
+					case(6):
+						std::cout << "Any of these delimeters (character which"
+							<< "separates numbers) may be used for the due date:"
+							<< "\n\t/ | . ~ ' ? , !\n\tDue time must use ':'";
+						return;
+					default:
+						std::cout << "Option not recognized. Please try again.\n";
+					}
 				}
-				collection.setDueDateFormat(formatString);
-				std::cout << "Due date format set to: "
-					<< collection.getDueDateFormat()
-					<< " . Note: If the due date format is different from your input,"
-					<< "\nit means that your format could not be parsed."
-					<< " Refer to \"help\" to learn how to set this up\n";
-				return;
 			}
 
 			std::cout << "Unknown format option: " << tokens[2] << "\n";
@@ -272,6 +306,14 @@ void InputReader::executeCommand(std::vector<std::string>& tokens,
 		}
 	}
 
+	if (tokens[0] == "logs") {
+		if (std::find(tokens.begin(), tokens.end(), "class") != tokens.end()) {
+			Logger::getInstance().printLogsSortedByClass();
+			return;
+		}
+		Logger::getInstance().printLogs();
+		return;
+	}
 
 	std::cout << "The set option you entered does not exist."
 		<< "\nPlease enter \"help\" for the manual";

@@ -19,6 +19,21 @@ Task::Task(const std::string& assignedName, short diff,
 	//TODO:: Add a guard for each setter, logging if failed
 }
 
+Task::Task(const std::string& assignedName, short diff,
+	int time, const std::string& due,
+	const std::string& dueDateFormat, const std::chrono::time_zone* zone,
+	bool debugStatus, int ID)
+{
+	setID(ID);
+	setName(assignedName);
+	setDifficulty(diff);
+	setEstimatedTime(time);
+	//TODO:: 
+	setDueDateString(due, dueDateFormat, zone);
+	setDebug(debugStatus);
+	//TODO:: Add a guard for each setter, logging if failed
+}
+
 TIME_POINT Task::stringToTimePoint(const std::string& dueDate, 
 	const std::string& dueDateFormat, 
 	const std::chrono::time_zone* zone) const
@@ -60,19 +75,6 @@ int Task::getDueDateInMinutes() const {
 	// Floors the current time to the nearest minute
 	std::chrono::system_clock::time_point now = 
 		std::chrono::floor<std::chrono::minutes>(std::chrono::system_clock::now());
-	
-	// !! Uncomment To Debug !!
-	/*
-	auto dueEpoch = std::chrono::duration_cast<std::chrono::minutes>
-		(dueDate.time_since_epoch()).count();
-	auto nowEpoch = std::chrono::duration_cast<std::chrono::minutes>
-		(now.time_since_epoch()).count();
-	int diff = dueEpoch - nowEpoch;
-
-	LOG("Task", "dueDate (epoch min): " + std::to_string(dueEpoch), true);
-	LOG("Task", "now (epoch min): " + std::to_string(nowEpoch), true);
-	LOG("Task", "diff in minutes: " + std::to_string(diff), true);
-	*/
 
 	// Subtracts current time from the due date, and turns that into minutes
 	// Then, counts the minute duration
@@ -232,17 +234,26 @@ int64_t Task::timeSinceEpoch(int year, int month, int day, int hours, int minute
 	
 	ans = (year - 1970) * 365LL * 86400;
 	
-	for (int m = month - 1; m >= 1; m--) {
-		// February
-		if (m == 2) {
-			ans += 28 * 86400;
-		}
-		else if ((m < 8 && m % 2 == 0) ||
-			(m >= 8 && m % 2 == 1)) {
-			ans += 30 * 86400;
-		}
-		else {
-			ans += 31 * 86400;
+	static const int monthDays[12] = {
+	31, // Jan
+	28, // Feb
+	31, // Mar
+	30, // Apr
+	31, // May
+	30, // Jun
+	31, // Jul
+	31, // Aug
+	30, // Sep
+	31, // Oct
+	30, // Nov
+	31  // Dec
+	};
+
+	for (int m = 1; m < month; m++) {
+		ans += monthDays[m - 1] * 86400;
+		if (m == 2 && year % 4 == 0 &&
+			(year % 100 != 0 || year % 400 == 0)) {
+			ans += 86400; // leap
 		}
 	}
 
@@ -269,114 +280,117 @@ const std::unordered_map<std::string,
 	{ "%F %R", [](const std::string& input) -> TIME_POINT {
 		// "YYYY-MM-DD HH:MM"
 		//  0123456789012345
-		try {
-			if (input.size() != 16) {
-				throw(std::invalid_argument("Input doesn't match format"));
-			}
-		}
-		catch (const std::invalid_argument& inv) {
-			std::cerr << "Input doesn't match the set due date format";
-			return TIME_POINT{};
-		}
-
-		int year, month, day, hours, minutes;
-		try {
-			year = stoi(input.substr(0, 4));
-		}
-		catch (const std::invalid_argument& e) {
-			// Default to current year	
-			auto today = floor<std::chrono::days>(std::chrono::system_clock::now());
-			std::chrono::year_month_day ymd{ today };
-			year = int(ymd.year());
-		}
-
-		try {
-			month = stoi(input.substr(5, 2));
-		}
-		catch (const std::invalid_argument& e) {
-			// Default to current month
-			auto today = floor<std::chrono::days>(std::chrono::system_clock::now());
-			std::chrono::year_month_day ymd{ today };
-			month = unsigned(ymd.month());
-		}
-
-		try {
-			day = stoi(input.substr(8, 2));
-		}
-		catch (const std::invalid_argument& e){
-			// Default to today
-			auto today = floor<std::chrono::days>(std::chrono::system_clock::now());
-			std::chrono::year_month_day ymd{ today };
-			day = unsigned(ymd.day());
-		}
-
-		try {
-			hours = stoi(input.substr(11, 2));
-		}
-		catch (const std::invalid_argument& e) {
-			// Default to last hour of the day
-			hours = 23;
-		}
-
-		try {
-			minutes = stoi(input.substr(14, 2));
-		}
-		catch (const std::invalid_argument& e) {
-			// Default to 59, the last minute possible
-			minutes = 59;
-		}
-
-		// Use the collected information to turn into TIME_POINT
-		int64_t fromEpoch = timeSinceEpoch(year, month, day, hours, minutes);
-		
-		return TIME_POINT{ std::chrono::seconds{fromEpoch} };
-	}},
-
-	// Common styles
-	{ "%Y/%m/%d %H:%M", [](const std::string& input) -> TIME_POINT {
-		// "YYYY/MM/DD HH:MM"
-		return TIME_POINT{};
+		return parseDateTime(input, 16, 0, 5, 8, 11, 14, false);
 	}},
 	
 	{ "%d-%m-%Y %H:%M", [](const std::string& input) -> TIME_POINT {
 		// "DD-MM-YYYY HH:MM"
-		return TIME_POINT{};
+		//  0123456789012345
+		return parseDateTime(input, 16, 6, 3, 0, 11, 14, false);
 	}},
 
 	// American styles
 	{ "%m/%d/%Y %I:%M %p", [](const std::string& input) -> TIME_POINT {
 		// "MM/DD/YYYY HH:MM AM/PM"
-		return TIME_POINT{};
-	}},
-	
-	{ "%B %d, %Y %I:%M %p", [](const std::string& input) -> TIME_POINT {
-		// "Month DD, YYYY HH:MM AM/PM"
-		return TIME_POINT{};
+		//  0123456789012345678
+		return parseDateTime(input, 19, 6, 0, 3, 11, 14, true);
 	}},
 
 	{ "%m-%d-%y %I:%M %p", [](const std::string& input) -> TIME_POINT {
 		// "MM-DD-YY HH:MM AM/PM"
-		return TIME_POINT{};
+		//  01234567890123456
+		return parseDateTime(input, 17, 6, 0, 3, 9, 12, true, 2);
 	}},
 
 	// Compact
 	{ "%y%m%d %H%M", [](const std::string& input) -> TIME_POINT {
-		// "YYMMDD HHMM"
-		return TIME_POINT{};
-	}},
-	
-	{ "%Y%m%dT%H%M", [](const std::string& input) -> TIME_POINT {
-		// "YYYYMMDDTHHMM"
-		return TIME_POINT{};
+		// "YYMMDD HH:MM"
+		//  012345678901
+		return parseDateTime(input, 12, 0, 2, 4, 7, 10, false, 2);
 	}},
 
-	// Words
-	{ "%A, %B %d %Y %H:%M", [](const std::string& input) -> TIME_POINT {
-		// "Monday, August 22 2025 19:45"
-		return TIME_POINT{};
-	}}
+	//// Words
+	//{ "%A, %B %d %Y %H:%M", [](const std::string& input) -> TIME_POINT {
+	//	// "Monday, August 22 2025 19:45"
+	//	return TIME_POINT{};
+	//}}
 
 	
 };
 
 
+TIME_POINT Task::parseDateTime(const std::string& input, size_t expectedSize, 
+	size_t yearPos, size_t monthPos, size_t dayPos, size_t hourPos, 
+	size_t minutePos, bool american, size_t yearSize) 
+{
+	try {
+		if (input.size() != expectedSize) {
+			throw(std::invalid_argument("Input doesn't match format"));
+		}
+	}
+	catch (const std::invalid_argument&) {
+		std::cerr << "Input doesn't match the set due date format";
+		return TIME_POINT{};//TODO:: redo this error handling system
+	}
+
+	int year, month, day, hours, minutes;
+
+	try {
+		year = stoi(input.substr(yearPos, yearSize));
+		if (yearSize == 2) year += 2000;
+	}
+	catch (const std::invalid_argument&) {
+		auto today = floor<std::chrono::days>(std::chrono::system_clock::now());
+		std::chrono::year_month_day ymd{ today };
+		year = int(ymd.year());
+	}
+
+	try {
+		month = stoi(input.substr(monthPos, 2));
+	}
+	catch (const std::invalid_argument&) {
+		auto today = floor<std::chrono::days>(std::chrono::system_clock::now());
+		std::chrono::year_month_day ymd{ today };
+		month = unsigned(ymd.month());
+	}
+
+	try {
+		day = stoi(input.substr(dayPos, 2));
+	}
+	catch (const std::invalid_argument&) {
+		auto today = floor<std::chrono::days>(std::chrono::system_clock::now());
+		std::chrono::year_month_day ymd{ today };
+		day = unsigned(ymd.day());
+	}
+
+	try {
+		hours = stoi(input.substr(hourPos, 2));
+		std::string copyOfInput = input;
+		std::transform(copyOfInput.begin(), copyOfInput.end(), 
+			copyOfInput.begin(), [](unsigned char c) {return std::tolower(c);});
+
+		if (american) {
+			if (copyOfInput.find("pm") != std::string::npos && hours != 12) {
+				hours += 12;
+			}
+			else if (copyOfInput.find("am") != std::string::npos && hours == 12) {
+				hours -= 12;
+			}
+		}
+		
+	}
+	catch (const std::invalid_argument&) {
+		// Default to 23
+		hours = 23;
+	}
+
+	try {
+		minutes = stoi(input.substr(minutePos, 2));
+	}
+	catch (const std::invalid_argument&) {
+		// Default to 59
+		minutes = 59;
+	}
+	int64_t fromEpoch = timeSinceEpoch(year, month, day, hours, minutes);
+	return TIME_POINT{ std::chrono::seconds{fromEpoch} };
+}

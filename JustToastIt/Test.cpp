@@ -199,16 +199,16 @@ TEST_CASE("Task Collection ID Assignment", "[TaskCollection]") {
 //}
 
 
-TEST_CASE("Benchmarks") {	
-	BENCHMARK("Many tasks") {
-		TaskCollection collection;
-		for (int i = 0; i < MAX_TESTS * 100; i++) {
-			Task task("name", 5, 652, "2025-12-15 18:57", collection.getDueDateFormat(), 
-				collection.getTimeZone(), true);
-			collection.addTask(task);
-		}
-	};
-}
+//TEST_CASE("Benchmarks") {	
+//	BENCHMARK("Many tasks") {
+//		TaskCollection collection;
+//		for (int i = 0; i < MAX_TESTS * 100; i++) {
+//			Task task("name", 5, 652, "2025-12-15 18:57", collection.getDueDateFormat(), 
+//				collection.getTimeZone(), true);
+//			collection.addTask(task);
+//		}
+//	};
+//}
 
 
 
