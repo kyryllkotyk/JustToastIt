@@ -120,6 +120,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -129,18 +130,25 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="catch_amalgamated.hpp" />
+    <ClInclude Include="InputReader.h" />
     <ClInclude Include="Logger.h" />
     <ClInclude Include="Scheduler.h" />
     <ClInclude Include="Task.h" />
     <ClInclude Include="TaskCollection.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="catch_amalgamated.cpp" />
+    <ClCompile Include="InputReader.cpp" />
     <ClCompile Include="Logger.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Scheduler.cpp" />
     <ClCompile Include="Task.cpp" />
     <ClCompile Include="TaskCollection.cpp" />
     <ClCompile Include="Test.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="TODO.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

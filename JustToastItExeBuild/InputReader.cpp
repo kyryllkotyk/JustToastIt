@@ -123,19 +123,12 @@ void InputReader::executeCommand(std::vector<std::string>& tokens,
 			std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 		}
 		if (firstDueDate == "") {
-			std::cout << "Enter due date (";
-			std::string format = collection.getDueDateFormat();
-			int firstPart = format.find(" ");
-			std::cout << format.substr(0, firstPart) << "): ";
+			std::cout << "Please enter due date (" +  collection.getDueDateFormat() + "): ";
 			std::cin >> firstDueDate;
 			std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 		}
 		if (secondDueDate == "") {
-			std::cout << "Enter due time (HH:MM) or press Enter: ";
-			std::getline(std::cin, secondDueDate);
-			if (secondDueDate.empty()) {
-				secondDueDate = "23:59";
-			}
+			secondDueDate = "23:59";
 		}
 
 		std::string dueDate = firstDueDate + " " + secondDueDate;
@@ -255,8 +248,6 @@ void InputReader::executeCommand(std::vector<std::string>& tokens,
 					int option;
 					std::cout << "Enter a number to select: ";
 					std::cin >> option;
-					std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-
 					switch (option) {
 					case(1):
 						collection.setDueDateFormat("%F %R");

@@ -1,0 +1,37 @@
+[Class] [Description]
+
+[Test]				[add tests that use string rather than minutesFromNow]
+[Test]				[create farthest due date]
+[Test]				[create max name size]
+[TaskCollection]	[displayTasks Add mutex]
+[Main]				[Handle restarting
+						This includes:
+						Restore tasks from storage
+						Recheck whether they should be pushed
+						AND add a tag for "reschedule for the restarted time"
+						for tasks that should be flexible with restarts, as a way to handle sleep time
+					]
+[Main]				[Schedule interactions]	
+[Logger]			[alertUserMisinput(int errorNum) <-- sets off alarms and prints them (Maybe?)]
+[Logger]			[add printLogsByError]
+[Logger]			[delete time point from logs]
+[Scheduler]			[Handle starting at exactly the start of a new minute, including after PC restart.]
+[Task]				[Ensure defaulting behavior for misinput]
+[Task]				[ensure time > 23:59 cannot be entered (this might apply more to the parser?)]
+[Task]				[add an optional description string, where the user can add more details]
+
+
+legacy code:
+//void Toast::displayToast(const Task& task)
+//{
+//	std::string title = "Start this task now!";
+//	std::string message =
+//		"You should start " + task.getName() + " now to complete it on time.";
+//
+//	std::string command = 
+//		"powershell -ExecutionPolicy Bypass -Command \" Import-Module BurntToast; New-BurntToastNotification -Text '"
+//		+ title + "', '" + message + "'\"";
+//	// This program has to run in administrator mode for it to work
+//	system(command.c_str());
+//}
+
