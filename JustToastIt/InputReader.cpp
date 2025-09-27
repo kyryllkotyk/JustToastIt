@@ -19,11 +19,14 @@ void InputReader::parse(const std::string& input, std::vector<std::string>& toke
 {
 	std::istringstream iss(input);
 	std::string token;
-	while (iss >> token) {
+
+	while (iss >> std::quoted(token)) {
 		tokens.emplace_back(token);
 	}
 
-	lowercase(tokens[0]);
+	if (!tokens.empty()) {
+		lowercase(tokens[0]);
+	}
 }
 
 void InputReader::lowercase(std::string& token)
@@ -68,16 +71,8 @@ void InputReader::executeCommand(std::vector<std::string>& tokens,
 				if (tokens[i][j] >= '0' && tokens[i][j] <= '9') hasNumber = true;
 			}
 
-			if (collectName) {
-				if (!name.empty()) name += " ";
-				name += tokens[i];
-				continue;
-			}
-
-			if (tokens[i].size() >= 2 && tokens[i].front() == '"' && tokens[i].back() == '"') {
-				name = tokens[i].substr(1, tokens[i].size() - 2);
-				name.erase(std::remove(name.begin(), name.end(), '\\'), name.end());
-
+			if (name.empty() && !hasNumber && hasLetter) {
+				name = tokens[i];
 				continue;
 			}
 
@@ -111,28 +106,70 @@ void InputReader::executeCommand(std::vector<std::string>& tokens,
 			std::cout << "Enter task's name: ";
 			name.erase(std::remove(name.begin(), name.end(), '\\'), name.end());
 			std::getline(std::cin, name);
+			if (name == "cancel") {
+				std::cout << "Cancelled.\n";
+				return;
+			}
 		}
 		if (diff == -1) {
 			std::cout << "Enter difficulty (1 - 10): ";
-			std::cin >> diff;
+			std::string toDiff;
+			std::cin >> toDiff;
 			std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+			if (toDiff == "cancel") {
+				std::cout << "Cancelled.\n";
+				return;
+			}
+			try {
+				diff = stoi(toDiff);
+			}
+			catch (const std::invalid_argument&) {
+				std::cout << "Invalid input (not a number)\n";
+				return;
+			}
 		}
 		if (time == -1) {
 			std::cout << "Enter estimated time (in minutes): ";
-			std::cin >> time;
+			std::string toTime;
+			std::cin >> toTime;
 			std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+
+			if (toTime == "cancel") {
+				std::cout << "Cancelled.\n";
+				return;
+			}
+
+			try {
+				time = std::stoi(toTime);
+			}
+			catch (const std::invalid_argument&) {
+				std::cout << "Invalid input (not a number).\n";
+				return;
+			}
 		}
 		if (firstDueDate == "") {
 			std::cout << "Enter due date (";
 			std::string format = collection.getDueDateFormat();
 			int firstPart = format.find(" ");
 			std::cout << format.substr(0, firstPart) << "): ";
+
 			std::cin >> firstDueDate;
 			std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+
+			if (firstDueDate == "cancel") {
+				std::cout << "Cancelled.\n";
+				return;
+			}
 		}
 		if (secondDueDate == "") {
 			std::cout << "Enter due time (HH:MM) or press Enter: ";
 			std::getline(std::cin, secondDueDate);
+
+			if (secondDueDate == "cancel") {
+				std::cout << "Cancelled.\n";
+				return;
+			}
+
 			if (secondDueDate.empty()) {
 				secondDueDate = "23:59";
 			}
