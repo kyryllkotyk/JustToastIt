@@ -329,7 +329,7 @@ TIME_POINT Task::parseDateTime(const std::string& input, size_t expectedSize,
 		}
 	}
 	catch (const std::invalid_argument&) {
-		std::cerr << "Input doesn't match the set due date format";
+		std::cerr << "Input doesn't match the set due date format\n";
 		return TIME_POINT{};//TODO:: redo this error handling system
 	}
 
